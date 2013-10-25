@@ -56,7 +56,7 @@ class TransportPlugin(object):
         """
         try:
             return self.configType.fromEnv()
-        except EnvError, e:
+        except EnvError as e:
             self.emit('ENV-ERROR %s' % str(e))
             raise e
 
@@ -79,7 +79,7 @@ class TransportPlugin(object):
             self.emit('VERSION %s' % wanted_versions[0])
 
         if cfg.allTransportsEnabled:
-            wanted_transports = transports.keys()
+            wanted_transports = list(transports.keys())
         else:
             # return able in priority-order determined by plugin
             wanted_transports = [t for t in transports if t in cfg.transports]
@@ -130,6 +130,6 @@ class TransportPlugin(object):
         :param str msg: A message.
         """
 
-        print >>self.stdout, msg
+        print(msg, file=self.stdout)
         self.stdout.flush()
 

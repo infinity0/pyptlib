@@ -153,7 +153,7 @@ class testServerOutput(PluginCoreTestMixin, unittest.TestCase):
         """Test output SMETHOD lines."""
         os.environ = BASE_ENVIRON
         self.plugin.init(["dummy", "boom"])
-        for transport, transport_bindaddr in self.plugin.getBindAddresses().items():
+        for transport, transport_bindaddr in list(self.plugin.getBindAddresses().items()):
             self.plugin.reportMethodSuccess(transport, transport_bindaddr, None)
         self.plugin.reportMethodsEnd()
 
@@ -167,7 +167,7 @@ class testServerOutput(PluginCoreTestMixin, unittest.TestCase):
         TEST_ENVIRON["TOR_PT_SERVER_TRANSPORT_OPTIONS"] = "boom:roots=culture;random:no=care;boom:first=fire"
         os.environ = TEST_ENVIRON
         self.plugin.init(["dummy", "boom"])
-        for transport, transport_bindaddr in self.plugin.getBindAddresses().items():
+        for transport, transport_bindaddr in list(self.plugin.getBindAddresses().items()):
             self.plugin.reportMethodSuccess(transport, transport_bindaddr, None)
         self.plugin.reportMethodsEnd()
 
@@ -177,7 +177,7 @@ class testServerOutput(PluginCoreTestMixin, unittest.TestCase):
         """Test an SMETHOD line with extra arguments."""
         os.environ = BASE_ENVIRON
         self.plugin.init(["dummy", "boom"])
-        for transport, transport_bindaddr in self.plugin.getBindAddresses().items():
+        for transport, transport_bindaddr in list(self.plugin.getBindAddresses().items()):
             self.plugin.reportMethodSuccess(transport, transport_bindaddr, "roots=culture,first=fire")
         self.plugin.reportMethodsEnd()
 

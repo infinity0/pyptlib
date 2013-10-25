@@ -25,12 +25,12 @@ SINK = object()
 
 # get default args from subprocess.Popen to use in subproc.Popen
 a = inspect.getargspec(subprocess.Popen.__init__)
-_Popen_defaults = zip(a.args[-len(a.defaults):],a.defaults); del a
+_Popen_defaults = list(zip(a.args[-len(a.defaults):],a.defaults)); del a
 if mswindows:
     # required for os.kill() to work
     tmp = dict(_Popen_defaults)
     tmp['creationflags'] |= subprocess.CREATE_NEW_PROCESS_GROUP
-    _Popen_defaults = tmp.items()
+    _Popen_defaults = list(tmp.items())
     del tmp
 
 class Popen(subprocess.Popen):
@@ -44,7 +44,7 @@ class Popen(subprocess.Popen):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs = dict(_Popen_defaults + kwargs.items())
+        kwargs = dict(_Popen_defaults + list(kwargs.items()))
         for f in ['stdout', 'stderr']:
             if kwargs[f] is SINK:
                 kwargs[f] = create_sink()
@@ -131,7 +131,7 @@ def _run_sigint_handlers(signum=0, sframe=None):
 
     # code snippet adapted from atexit._run_exitfuncs
     exc_info = None
-    for i in xrange(_intsReceived).__reversed__():
+    for i in range(_intsReceived).__reversed__():
         for handler in _SIGINT_RUN.get(i, []).__reversed__():
             try:
                 handler(signum, sframe)
@@ -139,12 +139,12 @@ def _run_sigint_handlers(signum=0, sframe=None):
                 exc_info = sys.exc_info()
             except:
                 import traceback
-                print >> sys.stderr, "Error in subproc._run_sigint_handlers:"
+                print("Error in subproc._run_sigint_handlers:", file=sys.stderr)
                 traceback.print_exc()
                 exc_info = sys.exc_info()
 
     if exc_info is not None:
-        raise exc_info[0], exc_info[1], exc_info[2]
+        raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
 
 
 _isTerminating = False
@@ -171,7 +171,7 @@ def killall(cleanup=lambda:None, wait_s=16):
         if proc.poll() is None:
             proc.terminate()
     # wait and make sure they're dead
-    for i in xrange(wait_s):
+    for i in range(wait_s):
         _CHILD_PROCS = [proc for proc in _CHILD_PROCS
                         if proc.poll() is None]
         if not _CHILD_PROCS: break

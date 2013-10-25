@@ -53,12 +53,12 @@ def parse_addr_spec(spec, defhost = None, defport = None, resolve = False):
     m = None
     # IPv6 syntax.
     if not m:
-        m = re.match(ur'^\[(.+)\]:(\d*)$', spec)
+        m = re.match(r'^\[(.+)\]:(\d*)$', spec)
         if m:
             host, port = m.groups()
             af = socket.AF_INET6
     if not m:
-        m = re.match(ur'^\[(.+)\]$', spec)
+        m = re.match(r'^\[(.+)\]$', spec)
         if m:
             host, = m.groups()
             af = socket.AF_INET6
@@ -68,7 +68,7 @@ def parse_addr_spec(spec, defhost = None, defport = None, resolve = False):
             host, port = spec.split(":", 1)
         except ValueError:
             host = spec
-        if re.match(ur'^[\d.]+$', host):
+        if re.match(r'^[\d.]+$', host):
             af = socket.AF_INET
         else:
             af = 0
@@ -86,7 +86,7 @@ def parse_addr_spec(spec, defhost = None, defport = None, resolve = False):
         flags = socket.AI_NUMERICHOST
     try:
         addrs = socket.getaddrinfo(host, port, af, socket.SOCK_STREAM, socket.IPPROTO_TCP, flags)
-    except socket.gaierror, e:
+    except socket.gaierror as e:
         raise ValueError("Bad host or port: \"%s\" \"%s\": %s" % (host, port, str(e)))
     if not addrs:
         raise ValueError("Bad host or port: \"%s\" \"%s\"" % (host, port))
