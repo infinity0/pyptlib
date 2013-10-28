@@ -25,6 +25,16 @@ if mswindows:
     # keep the default value as False. Perhaps we could make that work better.
     _kill_children_on_death = bool(os.getenv("KILL_CHILDREN_ON_DEATH", 0))
 
+    # Options to control this module's behaviour
+
+    """
+    By default on windows, python calls TerminateProcess to terminate a child
+    process, but semantically this is equivalent to SIGKILL which bypasses any
+    final cleanup. Set USE_CTRLBREAK_AS_SIGTERM=1 in the environment to send a
+    CTRL-BREAK console event instead, which acts more like SIGTERM.
+    """
+    _use_ctrlbreak_as_sigterm = bool(os.getenv("USE_CTRLBREAK_AS_SIGTERM", 1))
+
     from ctypes import byref, windll, WinError
     from ctypes.wintypes import DWORD
     import win32api, win32con, win32job, win32process
@@ -105,6 +115,16 @@ class Popen(subprocess.Popen):
                 win32con.SYNCHRONIZE | win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE, 0, self.pid)
             if win32job.AssignProcessToJobObject(_chJob, handle) == 0:
                 raise WinError()
+
+    if mswindows and _use_ctrlbreak_as_sigterm:
+        def send_signal(self, sig):
+            if sig == signal.SIGTERM:
+                self.terminate()
+            else:
+                subprocess.Popen.send_signal(self, sig)
+
+        def terminate(self):
+            os.kill(self.pid, signal.CTRL_BREAK_EVENT)
 
     # TODO(infinity0): perhaps replace Popen.std* with wrapped file objects
     # that don't buffer readlines() et. al. Currently one must avoid these and
@@ -204,6 +224,34 @@ def trap_sigint(handler, ignoreNum=0):
     handlers.register(handler, ignoreNum)
 
 
+_SIGTERM_HANDLERS = SignalHandlers()
+def trap_sigterm(handler, ignoreNum=0):
+    """Register a handler for a TERM signal (Unix) or CTRL-BREAK console event
+    (Windows).
+
+    Successive handlers are cumulative. On Unix, they override any previous
+    handlers registered with signal.signal(). On Windows, they *do not*
+    override previous handlers registered with win32api.SetConsoleCtrlHandler().
+
+    Args:
+        handler: a signal handler; see signal.signal() for details. For
+            cross-platform portability, it should accept None as a valid value
+            for the sframe (second) parameter.
+        ignoreNum: number of signals to ignore before activating the handler,
+            which will be run on all subsequent signals.
+    """
+    handlers = _SIGTERM_HANDLERS
+    if not (mswindows and _use_ctrlbreak_as_sigterm):
+        handlers.attach_override_unix(signal.SIGTERM)
+    handlers.register(handler, ignoreNum)
+
+if mswindows and _use_ctrlbreak_as_sigterm:
+    def _HandlerRoutine(signum):
+        if signum != signal.CTRL_BREAK_EVENT: return False
+        return _SIGTERM_HANDLERS.handle(signum)
+    win32api.SetConsoleCtrlHandler(_HandlerRoutine, True)
+
+
 _isTerminating = False
 def killall(cleanup=lambda:None, wait_s=16):
     """Attempt to gracefully terminate all child processes.
@@ -254,5 +302,5 @@ def auto_killall(ignoreNumSigInts=0, *args, **kwargs):
     """
     killall_handler = lambda signum, sframe: killall(*args, **kwargs)
     trap_sigint(killall_handler, ignoreNumSigInts)
-    signal.signal(signal.SIGTERM, killall_handler)
+    trap_sigterm(killall_handler)
     atexit.register(killall, *args, **kwargs)

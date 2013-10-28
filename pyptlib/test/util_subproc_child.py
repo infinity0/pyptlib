@@ -16,6 +16,12 @@ def child_default_io(subcmd, *argv):
 def child_killall_kill(subcmd, *argv):
     signal.signal(signal.SIGINT, hangForever)
     signal.signal(signal.SIGTERM, hangForever)
+    if sys.platform == "win32":
+        import win32api
+        def HandlerRoutine(signum):
+            if signum != signal.CTRL_BREAK_EVENT: return False
+            return hangForever(signum)
+        win32api.SetConsoleCtrlHandler(HandlerRoutine, True)
     child_default(None)
 
 if __name__ == '__main__':
